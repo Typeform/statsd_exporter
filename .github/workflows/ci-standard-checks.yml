@@ -14,9 +14,7 @@ on:
       - main
 jobs:
   ci-standard-checks:
-    runs-on:
-      - self-hosted
-      - automated-checks-ephemeral
+    runs-on: [ubuntu-latest]
     steps:
       - name: Check Out Source Code
         uses: actions/checkout@v3
