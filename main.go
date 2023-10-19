@@ -246,6 +246,7 @@ func main() {
 		statsdListenUnixgram = kingpin.Flag("statsd.listen-unixgram", "The Unixgram socket path to receive statsd metric lines in datagram. \"\" disables it.").Default("").String()
 		// not using Int here because flag displays default in decimal, 0755 will show as 493
 		statsdUnixSocketMode = kingpin.Flag("statsd.unixsocket-mode", "The permission mode of the unix socket.").Default("755").String()
+		statsdPassthroughUDP = kingpin.Flag("statsd.passthrough-udp", "The UDP address to pass metrics through").String()
 		mappingConfig        = kingpin.Flag("statsd.mapping-config", "Metric mapping configuration file name.").String()
 		readBuffer           = kingpin.Flag("statsd.read-buffer", "Size (in bytes) of the operating system's transmit read buffer associated with the UDP or Unixgram connection. Please make sure the kernel parameters net.core.rmem_max is set to a value greater than the value specified.").Int()
 		cacheSize            = kingpin.Flag("statsd.cache-size", "Maximum size of your metric mapping cache. Relies on least recently used replacement policy if max size is reached.").Default("1000").Int()
@@ -360,6 +361,22 @@ func main() {
 			os.Exit(1)
 		}
 
+		var udpPassthroughConn *net.UDPConn
+
+		if *statsdPassthroughUDP != "" {
+			udpPassthroughAddr, err := address.UDPAddrFromString(*statsdPassthroughUDP)
+			if err != nil {
+				level.Error(logger).Log("msg", "invalid UDP passthrough address", "address", *statsdPassthroughUDP, "error", err)
+				os.Exit(1)
+			}
+
+			udpPassthroughConn, err = net.ListenUDP("udp", udpPassthroughAddr)
+			if err != nil {
+				level.Error(logger).Log("msg", "failed to start UDP passthrough", "error", err)
+				os.Exit(1)
+			}
+		}
+
 		if *readBuffer != 0 {
 			err = uconn.SetReadBuffer(*readBuffer)
 			if err != nil {
@@ -381,6 +398,7 @@ func main() {
 			SamplesReceived: samplesReceived,
 			TagErrors:       tagErrors,
 			TagsReceived:    tagsReceived,
+			Passthrough:     udpPassthroughConn,
 		}
 
 		go ul.Listen()

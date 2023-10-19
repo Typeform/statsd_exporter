@@ -34,6 +34,7 @@ type Parser interface {
 
 type StatsDUDPListener struct {
 	Conn            *net.UDPConn
+	Passthrough     *net.UDPConn
 	EventHandler    event.EventHandler
 	Logger          log.Logger
 	LineParser      Parser
@@ -64,6 +65,15 @@ func (l *StatsDUDPListener) Listen() {
 			level.Error(l.Logger).Log("error", err)
 			return
 		}
+
+		if l.Passthrough != nil {
+			_, err := l.Passthrough.Write(buf[0:n])
+			if err != nil {
+				level.Error(l.Logger).Log("msg", "Failed to write to UDP passthrough", "error", err)
+				return
+			}
+		}
+
 		l.HandlePacket(buf[0:n])
 	}
 }

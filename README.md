@@ -129,6 +129,8 @@ NOTE: Version 0.7.0 switched to the [kingpin](https://github.com/alecthomas/king
                                     metric lines in datagram. "" disables it.
           --statsd.unixsocket-mode="755"
                                     The permission mode of the unix socket.
+          --statsd.passthrough-udp=""
+                                    The UDP address to pass metrics through.
           --statsd.mapping-config=STATSD.MAPPING-CONFIG
                                     Metric mapping configuration file name.
           --statsd.read-buffer=STATSD.READ-BUFFER
