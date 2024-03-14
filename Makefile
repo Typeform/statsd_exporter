@@ -28,3 +28,7 @@ build-typeform:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build
 	docker login -u $(DOCKER_USERNAME) -p=$(DOCKER_PASSWORD) 567716553783.dkr.ecr.us-east-1.amazonaws.com
 	docker build -t 567716553783.dkr.ecr.us-east-1.amazonaws.com/statsd_exporter .
+
+build-typeform-arm64:
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build
+	docker build -t 567716553783.dkr.ecr.us-east-1.amazonaws.com/statsd_exporter .
