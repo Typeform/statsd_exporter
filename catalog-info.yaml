@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: statsd_exporter
+  description: Receives StatsD-style metrics and exports them as Prometheus metrics.
+  annotations:
+    github.com/project-slug: 'typeform/statsd_exporter'
+  tags:
+    - language-go
+spec:
+  type: type-tools
+  lifecycle: use-production
+---
