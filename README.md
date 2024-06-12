@@ -1,3 +1,4 @@
+<a href=https://engineering-metrics.typeform.tf/standards-adoption-tool/reports/statsd_exporter/><img src=https://api.typeform.com/repositories/statsd_exporter/badges.svg /></a>
 # statsd exporter [![Build Status](https://travis-ci.org/prometheus/statsd_exporter.svg)][travis]
 
 [![CircleCI](https://circleci.com/gh/prometheus/statsd_exporter/tree/master.svg?style=shield)][circleci]
