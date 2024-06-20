@@ -15,6 +15,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -25,19 +26,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
-	"gopkg.in/alecthomas/kingpin.v2"
-
 	"github.com/prometheus/statsd_exporter/pkg/mapper"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-func init() {
+func init() { //nolint:gochecknoinits
 	prometheus.MustRegister(version.NewCollector("statsd_exporter"))
 }
 
 func serveHTTP(listenAddress, metricsEndpoint string) {
 	//lint:ignore SA1019 prometheus.Handler() is deprecated.
-	http.Handle(metricsEndpoint, prometheus.Handler())
+	http.Handle(metricsEndpoint, prometheus.Handler()) //nolint:staticcheck
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		//nolint:errcheck
 		w.Write([]byte(`<html>
 			<head><title>StatsD Exporter</title></head>
 			<body>
@@ -46,7 +47,8 @@ func serveHTTP(listenAddress, metricsEndpoint string) {
 			</body>
 			</html>`))
 	})
-	log.Fatal(http.ListenAndServe(listenAddress, nil))
+
+	log.Fatal(http.ListenAndServe(listenAddress, nil)) //nolint:gosec
 }
 
 func ipPortFromString(addr string) (*net.IPAddr, int) {
@@ -58,6 +60,7 @@ func ipPortFromString(addr string) (*net.IPAddr, int) {
 	if host == "" {
 		host = "0.0.0.0"
 	}
+
 	ip, err := net.ResolveIPAddr("ip", host)
 	if err != nil {
 		log.Fatalf("Unable to resolve %s: %s", host, err)
@@ -73,6 +76,7 @@ func ipPortFromString(addr string) (*net.IPAddr, int) {
 
 func udpAddrFromString(addr string) *net.UDPAddr {
 	ip, port := ipPortFromString(addr)
+
 	return &net.UDPAddr{
 		IP:   ip.IP,
 		Port: port,
@@ -82,6 +86,7 @@ func udpAddrFromString(addr string) *net.UDPAddr {
 
 func tcpAddrFromString(addr string) *net.TCPAddr {
 	ip, port := ipPortFromString(addr)
+
 	return &net.TCPAddr{
 		IP:   ip.IP,
 		Port: port,
@@ -104,6 +109,7 @@ func watchConfig(fileName string, mapper *mapper.MetricMapper) {
 		select {
 		case ev := <-watcher.Event:
 			log.Infof("Config file changed (%s), attempting reload", ev)
+
 			err = mapper.InitFromFile(fileName)
 			if err != nil {
 				log.Errorln("Error reloading config:", err)
@@ -125,14 +131,17 @@ func watchConfig(fileName string, mapper *mapper.MetricMapper) {
 func dumpFSM(mapper *mapper.MetricMapper, dumpFilename string) error {
 	f, err := os.Create(dumpFilename)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create file:%w", err)
 	}
+
 	log.Infoln("Start dumping FSM to", dumpFilename)
+
 	w := bufio.NewWriter(f)
 	mapper.FSM.DumpFSM(w)
 	w.Flush()
 	f.Close()
 	log.Infoln("Finish dumping FSM")
+
 	return nil
 }
 
@@ -144,7 +153,7 @@ func main() {
 		statsdListenUDP       = kingpin.Flag("statsd.listen-udp", "The UDP address on which to receive statsd metric lines. \"\" disables it.").Default(":9125").String()
 		statsdListenTCP       = kingpin.Flag("statsd.listen-tcp", "The TCP address on which to receive statsd metric lines. \"\" disables it.").Default(":9125").String()
 		mappingConfig         = kingpin.Flag("statsd.mapping-config", "Metric mapping configuration file name.").String()
-		readBuffer            = kingpin.Flag("statsd.read-buffer", "Size (in bytes) of the operating system's transmit read buffer associated with the UDP connection. Please make sure the kernel parameters net.core.rmem_max is set to a value greater than the value specified.").Int()
+		readBuffer            = kingpin.Flag("statsd.read-buffer", "Size (in bytes) of the operating system's transmit read buffer associated with the UDP connection. Please make sure the kernel parameters net.core.rmem_max is set to a value greater than the value specified.").Int() //nolint:lll
 		dumpFSMPath           = kingpin.Flag("debug.dump-fsm", "The path to dump internal FSM generated for glob matching as Dot file.").Default("").String()
 	)
 
@@ -168,14 +177,15 @@ func main() {
 
 	go serveHTTP(*listenAddress, *metricsEndpoint)
 
-	events := make(chan Events, 1024)
+	events := make(chan Events, 1024) //nolint:gomnd
 	defer close(events)
 
 	if *statsdListenUDP != "" {
 		udpListenAddr := udpAddrFromString(*statsdListenUDP)
+
 		uconn, err := net.ListenUDP("udp", udpListenAddr)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(err) //nolint:gocritic
 		}
 
 		if *readBuffer != 0 {
@@ -191,6 +201,7 @@ func main() {
 
 	if *statsdListenTCP != "" {
 		tcpListenAddr := tcpAddrFromString(*statsdListenTCP)
+
 		tconn, err := net.ListenTCP("tcp", tcpListenAddr)
 		if err != nil {
 			log.Fatal(err)
@@ -207,20 +218,24 @@ func main() {
 		if err != nil {
 			log.Fatal("Error loading config:", err)
 		}
+
 		if *dumpFSMPath != "" {
 			err := dumpFSM(mapper, *dumpFSMPath)
 			if err != nil {
 				log.Fatal("Error dumping FSM:", err)
 			}
 		}
+
 		go watchConfig(*mappingConfig, mapper)
 	}
+
 	exporter := NewExporter(mapper)
 	exporter.Listen(events)
 }
 
-func passthroughUdpConn(addr string) []net.Conn {
-	var out []net.Conn
+func passthroughUdpConn(addr string) []net.Conn { //nolint:revive
+	var out []net.Conn //nolint:prealloc
+
 	addrs := strings.Split(addr, ",")
 
 	for _, a := range addrs {
